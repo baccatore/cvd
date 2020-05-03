@@ -1,0 +1,88 @@
+/* tpg.css */
+
+/* リセット開始 */
+*{
+	margin: 0;
+	padding: 0;
+	-web-kit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+h1,h2,h3,h4,h5,h6,p{
+	margin-bottom: 6pt;
+}
+ol,ul,dl{
+	list-style-position: inside;
+}
+/* リセット終了 */
+
+/* 標準セレクタ開始 */
+body{
+	color :	#000;
+	background-color: #fff;
+	font: 14px Consolas, 'Courier New', Courier, Monaco, monospace;
+    line-height: 1;	  /* 要素の高さや幅が計算しやすくなる */
+}
+
+a{
+	text-decoration: none;
+}
+a:link, a:visited{
+				color: inherit;
+}
+a:hover{
+	text-decoration: underline;
+}
+strong{
+	font-weight: 800;
+	color: #000;
+}
+/* 標準セレクタ終了 */
+
+/* cvd名前空間セレクタ開始 */
+#cvd{
+	position: absolute;
+	top		: 0;
+	left	: 0;
+	bottom  : 0;
+	right	: 0;
+	
+	padding-left: 1px;
+
+	min-height	: 15em;
+	min-width	: 35em;
+	overflow	: hidden;
+
+	background-color: #fff;
+}
+#cvd-tlp {
+	position: absolute;
+	border: solid 1px #999;
+	background-color: #ccc;
+	height: 450px;
+	width: 50px;
+}
+
+#cvd-bcg, #cvd-cvs, #cvd-opr {
+	position: absolute;
+	top:0;
+	left: 0;
+}
+
+#cvd-bcg{
+	background-color: #fff;
+}
+
+#cvd-inf {
+	position: absolute;
+	top: 600px;
+	left: 0;
+	width: 600px;
+	height: 20px;
+	border: solid 1px #cfc;
+	background-color: #eeeeee;
+}
+/* cvd名前空間セレクタ終了 */
+
+/* ユーティリティセレクタ開始 */
+/* ユーティリティセレクタ終了 */
