@@ -326,7 +326,6 @@ cvd.tool = (function () {
 		down: mouse.down,
 		move: mouse.move,
 		up: mouse.up,
-		draw: draw,
 		initModule: initModule,
 		changeTool: changeTool,
 		changeColor: changeColor
