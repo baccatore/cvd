@@ -41,13 +41,14 @@ strong{
 
 /* cvd名前空間セレクタ開始 */
 #cvd{
-	position: absolute;
+	/* position: absolute; */
 	top		: 0;
-	left	: 0;
+	left	: 100px;
 	bottom  : 0;
 	right	: 0;
 	
 	padding-left: 1px;
+	margin: 0, auto; 
 
 	min-height	: 15em;
 	min-width	: 35em;
@@ -63,13 +64,13 @@ strong{
 	width: 50px;
 }
 
-#cvd-bcg, #cvd-cvs, #cvd-opr {
+#cvd-cvs-bcg, #cvd-cvs-cvs, #cvd-cvs-opr {
 	position: absolute;
 	top:0;
 	left: 0;
 }
 
-#cvd-bcg{
+#cvd-cvs-bcg{
 	background-color: #fff;
 }
 

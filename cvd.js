@@ -14,435 +14,322 @@
  * :true, vars : false, white : true
  */
 
+//TODO Initialize cavas size with input value
+
 /* global $, cvd */
-cvd = (function() {
-  'use strict';
-  // --Module Scope Variables BEGIN-------------------------------------------
-  var
-    // Configuration properties mapping
-    configMap = {
-      mainHtml      : String()
-		+ '<canvas id="cvd-bcg" width="600" height="600"></canvas>'
-        + '<canvas id="cvd-cvs" width="600" height="600"></canvas>'
-		+ '<canvas id="cvd-opr" width="600" height="600"></canvas>'
-		+ '<div id="cvd-tlp">'
-			+	'<ul id="cd-tlp-pnl">'
-				+	'<li id="cvd-tlp-pnl-brsh">Brush</li>'
-				+	'<li id="cvd-tlp-pnl-rect">Rectangle</li>'
-				+	'<li id="cvd-tlp-pnl-crcl">Circlh</li>'
-				+	'<li id="cvd-tlp-pnl-line">Line</li>'
-				+	'<li id="cvd-tlp-pnl-rbbr">Rubber</li>'
-				+	'<li id="cvd-tlp-pnl-color">Color</li>'
-				+	'<li id="cvd-tlp-pnl-size">Size</li>'
-			+	'</ul>'
-		+ '</div>'
-		+ '<div id="cvd-inf"></div>',
-	  bcgCtx		: undefined,
-	  cvsCtx		: undefined,
-	  oprCtx		: undefined,
-	  cvsWidth		: 600,
-	  cvsHeight		: 600
-	},
-    // State properties mapping
-    stateMap = {
-      $container	: undefined,
-	  selectedCtx	: undefined,
-	  selectedTool	: undefined,
-	  selectedFillColor		: undefined,
-	  selectedStrokeColor	: undefined,
-	  selectedBrushSize			: undefined
-    },
-    jqMap = {}, // Cash for jQuery mapping
-	setJqMap,
-	
-	//Utilities
-	round, background, info, draw,
-	//Listners
-	//setListenersForOpr,
-	onClickCvd,
-	onClickCanvas,
-	//onMouse,
-	onMouseDown,
-	onMouseUp,
-	onMouseMove,
-	onMouseOut,
-	onMouseDownCrcl,
-	onMouseUpCrcl,
-	onMouseMoveCrcl,
-	onMouseOutCrcl,
-	onMouseDownToolPallet,
-	onMouseUpToolPallet,
-	onMouseMoveToolPallet,
-	onMouseOutToolPallet,
-	//onClickBrush,
-	
-	//Public Methods
-	initModule
-  ;
-  // --Module Scope Variables END---------------------------------------------
+var cvd = (function () {
+	"use strict";
+	var	initModule;
+	initModule = function ($container) {
+		cvd.canvas.initModule($container);
+		cvd.tool.initModule();
+		};
+	return { initModule: initModule };
+})();
 
-  // --Utilities Method BEGIN-------------------------------------------------
-  round = function (x) {
-	if(x%10>0 && x%10<5) x= x - x%10;
-	else if( x%10>=5 ) x= (x - x%10) + 10 ;
-	return x;
-  };
-  
-  background = function (){
-	var ctx = configMap.bcgCtx;
-    ctx.clearRect(0,0, configMap.cvsHeight, configMap.cvsWidth);
-	ctx.lineWidth = 0.1;
-    for( var i = 0; i < 601 ; i += 10 ){
-	  if(i%50==0){
-		ctx.strokeStyle="rgb(0,0,0)";
-	  }
-	  else {
-		ctx.strokeStyle="rgb(144,144,144)";
-	  }
-	  //Vertical Lines
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, configMap.cvsHeight);
-      ctx.closePath();
-      ctx.stroke();
-	  //Horizontal Lines
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(configMap.cvsWidth,i);
-      ctx.closePath();
-      ctx.stroke();
-    }
-	return false;
-  };
-  
-  info = function (text) {
-	jqMap.$inf.text(text);
-	return false;
-  }
-  
-  draw = function (ctx) {
-	//var ctx = stateMap.selectedCtx;
-	switch(stateMap.selectedTool) {
-	case 'brsh' :
-		//Cursor
-		ctx.beginPath();
-		ctx.moveTo(pre_x, pre_y);
-		ctx.lineTo(end_x, end_y);
-		ctx.stroke();
-		ctx = configMap.cvsCtx;
-		//XXX Actually drawing
-		ctx.beginPath();
-		ctx.moveTo(pre_x, pre_y);
-		ctx.lineTo(end_x, end_y);
-		ctx.stroke();
-		break;
-	case 'rect' :
-		ctx.fillRect(begin_x, begin_y, end_x - begin_x, end_y - begin_y);
-		break;
-	case 'crcl' :
-		var dist
-		dist = Math.sqrt(Math.pow((end_x-begin_x),2)+Math.pow((end_y-begin_y),2));
-		info(dist);
-		ctx.beginPath();
-		ctx.arc(begin_x, begin_y, dist, 0, 2*Math.PI, true);
-		ctx.fill();
-		break;
-	case 'line' :
-		ctx.beginPath();
-		ctx.moveTo(begin_x, begin_y);
-		ctx.lineTo(end_x, end_y);
-		ctx.closePath();
-		ctx.stroke();
-		break;
-	case 'rbbr' :
-		if(ctx == configMap.oprCtx) { //XXX
-			ctx.fillRect(begin_x, begin_y, end_x - begin_x, end_y - begin_y);
-			ctx.rect();
-		}
-		if(ctx == configMap.cvsCtx)
-			ctx.clearRect(begin_x, begin_y, end_x-begin_x,end_y-begin_y);
-		break;
-	default:
-		console.log('Error! :' + stateMap.selectedTool);
-	}
-	return false;
-  }
-  // --Utilities Method END---------------------------------------------------
+cvd.canvas = (function () {
+	"use strict";
 
-  // --DOM Method BEGIN-------------------------------------------------------
-  /** setJqueryMap */
-  setJqMap = function () {
-    var $container = stateMap.$container;
-    jqMap = {
-		$container	: $container,
-		$tlp		: $container.find('#cvd-tlp'), //ToolPallet
-		$bcg		: $container.find('#cvd-bcg'), //Background
-		$cvs		: $container.find('#cvd-cvs'), //Canvas
-		$opr		: $container.find('#cvd-opr'), //Operation
-		$inf		: $container.find('#cvd-inf')  //Information
+	/**********************/
+	/** Property mapping **/
+	/**********************/
+	var // Configuration properties mapping
+		configMap = {
+			mainHtml:
+				String() +
+				'<div id="cvd-cvs">' +
+					'<canvas id="cvd-cvs-bcg" width="1024" height="758">' +
+					"</canvas>" +
+					'<canvas id="cvd-cvs-cvs" width="1024" height="758">' +
+					"</canvas>" +
+					'<canvas id="cvd-cvs-opr" width="1024" height="758">' +
+					"</canvas>" +
+				"</div>",
+			bcgCtx: undefined,
+			cvsCtx: undefined,
+			oprCtx: undefined,
+			cvsWidth: 1024,
+			cvsHeight: 758
+		},
+		// State properties mapping
+		stateMap = {
+			$container: undefined,
+			selectedCtx: undefined,
+		},
+		// Cash for jQuery mapping
+		jqMap = {},
+		// Private methods
+		setJqMap,
+		initializeBackground,
+		setRuler,
+		// Public methods
+		getCvsCtx,
+		getOprCtx,
+		flush,
+		initModule;
 
-	};
-	return false;
-  };
-  // --DOM Method END---------------------------------------------------------
-
-  // --Event Listeners BEGIN--------------------------------------------------
-  onClickCvd = function (e){
-	//var dom;
-	var elementId;
-	elementId = e.target.id;
-	info(elementId);
-	if(elementId.split('-')[1] == 'tlp') stateMap.selectedTool = elementId.split('-')[3];
-	return false;
-  }
-  
-  var //name Vecorize?
-	new_x,	 new_y,
-	old_x,	 old_y,
-	pre_x,	 pre_y,
-	begin_x, begin_y,
-	end_x,   end_y,
-	dragging = false; //XXX
-  
-    onClickCanvas = function (e) {
-	if(dragging) return;
-//	var x = round(e.pageX) ;
-//	var y = round(e.pageY) ;
-//	var ctx = stateMap.ctx;
-//	ctx.fillStyle="rgb(119, 3, 7)";
-//	ctx.beginPath();
-//	ctx.arc(x, y, 2, 0, 2 * Math.PI);
-//	ctx.fill();
-  }
-  
-  //BEGIN Rect Listners
-  onMouseDown = function (e) { // return?
-	var ctx = configMap.oprCtx;
-	begin_x = e.pageX ;
-	begin_y = e.pageY ;
-	pre_x = begin_x;
-	pre_y = begin_y;
-	ctx.fillStyle	=	stateMap.selectedFillColor;
-	ctx.strokeStyle	=	stateMap.selectedStrokeColor;
-	dragging = true;
-	return false;
-  };
-	
-  onMouseUp = function (e) {
-  	var ctx = configMap.cvsCtx;
-	end_x = e.pageX ;
-	end_y = e.pageY ;
-	if(dragging) draw(ctx);
-	dragging = false;
-	return false;
-  };
-	
-  onMouseMove = function (e) {
-	var ctx = configMap.oprCtx;
-    ctx.clearRect(0,0, configMap.cvsHeight, configMap.cvsWidth);
-	end_x = e.pageX ;
-	end_y = e.pageY ;
-	if(stateMap.selectedTool == 'brsh' ) ctx = configMap.cvsCtx;
-	if(dragging) draw(ctx);
-	pre_x = end_x;
-	pre_y = end_y;
-	return false;
-  };
-  
-  onMouseOut = function () {};
-  //END Rect Listeners
-  
-  //BEGIN Crcl Listners
-  //END Crcl Listners
-
-  //BEGIN ToolPallet Listeners
-  onMouseDownToolPallet = function (e) {
-	var $tlp = jqMap.$tlp;
-	begin_x = e.pageX ;
-	begin_y = e.pageY ;
-	old_x = $tlp.offset().left;
-	old_y = $tlp.offset().top;
-	dragging = true;
-  };
-  
-  onMouseUpToolPallet = function (e) {
-  	var $tlp = jqMap.$tlp;
-	end_x = e.pageX ;
-	end_y = e.pageY ;
-	new_x = old_x + (end_x - begin_x);
-	new_y = old_y + (end_y - begin_y);
-	if(dragging){
-		$tlp.css('left', new_x);
-		$tlp.css('top', new_y);
-	}
-	dragging = false;
-  };
-  
-  onMouseOutToolPallet = function () {};
-  
-  onMouseMoveToolPallet = function (e) {
-  	var $tlp = jqMap.$tlp;
-	end_x = e.pageX ;
-	end_y = e.pageY ;
-	new_x = old_x + (end_x - begin_x);
-	new_y = old_y + (end_y - begin_y);
-	if(dragging){
-		$tlp.css('left', new_x);
-		$tlp.css('top', new_y);
-	}
-  };
-
-/*下位メニュー表示モジュール*/
-//  onClickBrush = function () {
-//	var $panel = jqMap.$tlp.find('#cvd-tlp-pnl-brush'), html;
-//	
-//	html = String()
-//		+ '<ul>'
-//			+ '<li id="tlp-pnl-brush-rect">Rectangle</li>'
-//			+ '<li id="tlp-pnl-brush-crcl">Circle</li>'
-//			+ '<li id="tlp-pnl-brush-line">Line</li>'
-//			+ '<li id="tlp-pnl-brush-brsh">Brush</li>'
-//		+ '</ul>';
-//	
-//	
-//	$panel.empty();
-//	$panel.html(html);
-//	
-//	info('Brush');
-//	return false;
-//  }
-  
-//  setListenersForOpr = function (new_opr) {
-//	var $opr = jqMap.$opr;
-//	//前のものを一旦切る。
-//	$opr.off('mousedown');
-//	$opr.off('mousemove');
-//	$opr.off('mouseup');
-//	$opr.off('mouseout');
-//	//Listenerを切り替える。
-//	$opr.on('mousedown', onMouse.down[new_opr]);
-//    $opr.on('mousemove', onMouse.up[new_opr]);
-//    $opr.on('mouseup',   onMouse.move[new_opr]);
-//    $opr.on('mouseout',  onMouse.out[new_opr]);
-//	
-//  }
-  //END ToolPallet Listeners
-//  
-//  onMouse = (function() {
-//	var move, up, down, out;
-//	
-//	move = (function () {
-//		var rect, crcl, line;
-//		
-//		crcl = function (e) {
-//			var ctx = configMap.oprCtx;
-//			ctx.clearRect(0,0, configMap.cvsHeight, configMap.cvsWidth);
-//			end_x = e.pageX ;
-//			end_y = e.pageY ;
-//			if(dragging) ctx.fillRect(begin_x, begin_y, end_x - begin_x, end_y - begin_y);
-//		};
-//			
-//		return {
-//			rect : rect,
-//			crcl : crcl,
-//			line : line
-//		}
-//	} ());
-//			 
-//	down = (function () {
-//		var rect, crcl, line;
-//					 
-//		crcl =function (e) { // return?
-//			var ctx = configMap.oprCtx;
-//			begin_x = e.pageX ;
-//			begin_y = e.pageY ;
-//			ctx.fillStyle="rgb(119, 3, 7)";
-//			dragging = true;
-//		};
-//		return {
-//			rect : rect,
-//			crcl : crcl,
-//			line : line
-//		}
-//	} ());
-//		 
-//	up = (function () {
-//		var rect, crcl, line;
-//		crcl = function (e) {
-//			var ctx = configMap.cvsCtx;
-//			end_x = e.pageX ;
-//			end_y = e.pageY ;
-//			if(dragging) ctx.fillRect(begin_x, begin_y, end_x - begin_x, end_y - begin_y);
-//			dragging = false;
-//		};
-//		return {
-//			rect : rect,
-//			crcl : crcl,
-//			line : line
-//		}
-//	} ());
-//	
-//	return {
-//		move	: move,
-//		out		: out,
-//		up		: up,
-//		down	: down
-//	}
-//  } ());
-  // --Event Listeners END----------------------------------------------------
-
-  // --Public Method BEGIN----------------------------------------------------
-  initModule = function( $container ) {
-	var $opr, $tlp, $brush;
-    $container.append( configMap.mainHtml );
-    stateMap.$container = $container;
-    setJqMap();
-	
-	if (!window.HTMLCanvasElement) {
-		alert('This function needs Canvas module.');
+	/*********************/
+	/** Private methods **/
+	/*********************/
+	setJqMap = function () {
+		var $container = stateMap.$container;
+		jqMap = {
+			$container: $container,
+			$bcg: $container.find("#cvd-cvs-bcg"), //Background
+			$cvs: $container.find("#cvd-cvs-cvs"), //Canvas
+			$opr: $container.find("#cvd-cvs-opr") //Operation
+		};
 		return false;
-	}
-	
-	configMap.bcgCtx = jqMap.$bcg[0].getContext('2d');
-	configMap.cvsCtx = jqMap.$cvs[0].getContext('2d');
-	configMap.oprCtx = jqMap.$opr[0].getContext('2d');
-	stateMap.selectedCtx = configMap.cvsCtx;
-	
-	background();
-	
-	//Initial Values for tool
-	stateMap.selectedTool = 'crcl';
-	stateMap.selectedFillColor = "rgba(63, 127, 191, 0.6)"
-	stateMap.selectedStrokeColor = "rgba(191, 63, 63, 0.9)"
-	stateMap.selectedBrushSize	= 10;
-			
-	
-	//Global Listner
-	$container.on('click', onClickCvd);
-	
-	//Set Listener concerning with Canvas DOM element
-	$opr = jqMap.$opr;
-	$opr.on('click', onClickCanvas);
-	$opr.on('mousedown', onMouseDown);
-    $opr.on('mousemove', onMouseMove);
-    $opr.on('mouseup',   onMouseUp);
-    $opr.on('mouseout',  onMouseOut);
-	
-	//Set Listner concerning with ToolPallet DOM element
-	$tlp = jqMap.$tlp;
-	//$tlp.on('click', onClickToolPallet);
-	$tlp.on('mousedown', onMouseDownToolPallet);
-    $tlp.on('mousemove', onMouseMoveToolPallet);
-    $tlp.on('mouseup',   onMouseUpToolPallet);
-    $tlp.on('mouseout',  onMouseOutToolPallet);
+	};
 
-	
-    return true;
-  }
-  // --Public Method END------------------------------------------------------
+	initializeBackground = function () {
+		var ctx = configMap.bcgCtx;
+		ctx.clearRect(0, 0, configMap.cvsWidth, configMap.cvsHeight);
+		setRuler();
+		return false;
+	};
 
-  /** Export of Public Methods */
-  return {
-    initModule    : initModule
-  };
+	setRuler = function () {
+		var ctx = configMap.bcgCtx;
+		ctx.lineWidth = 0.1;
+
+		//Vertical Lines
+		for (var i = 0; i < configMap.cvsWidth; i += 10) {
+			if (i % 50 == 0) {
+				ctx.strokeStyle = "rgb(0,0,0)";
+			} else {
+				ctx.strokeStyle = "rgb(144,144,144)";
+			}
+			ctx.beginPath();
+			ctx.moveTo(i, 0);
+			ctx.lineTo(i, configMap.cvsHeight);
+			ctx.closePath();
+			ctx.stroke();
+		}
+
+		//Horizontal Lines
+		for (var i = 0; i < configMap.cvsHeight; i += 10) {
+			if (i % 50 == 0) {
+				ctx.strokeStyle = "rgb(0,0,0)";
+			} else {
+				ctx.strokeStyle = "rgb(144,144,144)";
+			}
+			ctx.beginPath();
+			ctx.moveTo(0, i);
+			ctx.lineTo(configMap.cvsWidth, i);
+			ctx.closePath();
+			ctx.stroke();
+		}
+		return false;
+	};
+
+
+	/********************/
+	/** Public Methods **/
+	/********************/
+	flush = function(){
+		configMap.oprCtx.clearRect(0, 0, configMap.cvsWidth, configMap.cvsHeight);
+		return false;
+	};
+
+	getCvsCtx = function(){
+		return jqMap.$cvs[0].getContext("2d")
+	};
+
+	getOprCtx = function(){
+		return jqMap.$opr[0].getContext("2d")
+	};
+
+	initModule = function ($container) {
+		var $opr, $tlp, $brush;
+		$container.append(configMap.mainHtml);
+		stateMap.$container = $container;
+		setJqMap();
+
+		// Check cavanvas module is available
+		if (!window.HTMLCanvasElement) {
+			alert("This function needs Canvas module.");
+			return false;
+		}
+
+		// Initialize canvas context
+			configMap.bcgCtx = jqMap.$bcg[0].getContext("2d");
+			configMap.cvsCtx = getCvsCtx();
+			configMap.oprCtx = getOprCtx();
+			stateMap.selectedCtx = configMap.cvsCtx;
+
+		// Initialize background
+		initializeBackground();
+
+		// Set listeners
+		$opr = jqMap.$opr;
+		var eventData = {'cvsCtx': configMap.cvsCtx, 'oprCtx': configMap.oprCtx};
+		$opr.on("mousedown",eventData,cvd.tool.down);
+		$opr.on("mousemove",eventData,cvd.tool.move);
+		$opr.on("mouseup",eventData,cvd.tool.up);
+
+		return true;
+	};
+
+	/***************************/
+	/** Export Public Methods **/
+	/***************************/
+	return {
+		initModule: initModule,
+		flush: flush,
+		getCvsCtx: getCvsCtx,
+		getOprCtx: getOprCtx
+	};
+})();
+
+/*****************/
+/** Tool module **/
+/*****************/
+cvd.tool = (function () {
+	"use strict";
+	var
+	  configMap = {
+			colorPalettes : 
+			[ '#140c1c', '#442434', '#30346d', '#4e4a4e',
+				'#854c30', '#346524', '#d04648', '#757161',
+				'#597dce', '#d27d2c', '#8595a1', '#6daa2c', 
+				'#d2aa99', '#6dc2ca', '#dad45e', '#deeed6'],
+			selectedAreaColor : '#000000'
+		},
+	  mouse = {
+			start    : {x: undefined, y:undefined },
+			previous : {x: undefined, y:undefined },
+			end      : {x: undefined, y:undefined },
+			isDragged: false,
+			down: undefined,
+			move: undefined,
+			up: undefined
+			//TODO define mouseout event
+			//out: undefined
+		},
+		stateMap = {
+			selectedCtx: undefined,
+			selectedTool: undefined,
+			selectedColor: undefined,
+			selectedBrushSize: undefined
+		},
+	  draw,
+		changeColor,
+		changeTool,
+		initModule;
+
+		mouse.down= function(e){
+			mouse.start = {x: e.pageX, y: e.pageY};
+			mouse.previous = mouse.start;
+			mouse.isDragged= true;
+		};
+
+		mouse.move = function(e) {
+			var tool = stateMap.selectedTool;
+			if (mouse.isDragged) {
+				mouse.end = {x: e.pageX, y: e.pageY};
+				if (!(tool == "brsh" && tool == "rbbr")) cvd.canvas.flush();
+				draw();
+				mouse.previous = mouse.end;
+			};
+			return false;
+		};
+
+		mouse.up = function(e) {
+			var tool = stateMap.selectedTool;
+			mouse.end = {x: e.pageX, y: e.pageY};
+			mouse.isDragged = false;
+			if (!(tool == "brsh" && tool == "rbbr")) cvd.canvas.flush();
+			draw();
+			return false;
+		};
+		
+		changeColor = function(colorIndex){
+			stateMap.selectedColorIndex = colorIndex;
+			configMap.cvsCtx.fillStyle = configMap.colorPalettes[colorIndex];
+			configMap.cvsCtx.strokeStyle = configMap.colorPalettes[colorIndex];
+			return false;
+		};
+
+		changeTool = function(toolName){
+			stateMap.selectedTool = toolName;
+			if(toolName == 'rbbr'){
+				changeColor(0);
+			} else {
+				changeColor(stateMap.selectedColorIndex);
+			};
+			return false;
+		};
+		
+		draw = function () {
+			var ctx = undefined;
+			switch (stateMap.selectedTool) {
+				case "brsh":
+				    ctx = configMap.cvsCtx;
+						ctx.beginPath();
+						ctx.moveTo(mouse.previous.x, mouse.previous.y);
+						ctx.lineTo(mouse.end.x, mouse.end.y);
+						ctx.stroke();
+					break;
+				case "rect":
+				  ctx = mouse.isDragged ? configMap.oprCtx : configMap.cvsCtx;
+					ctx.fillRect(mouse.start.x, mouse.start.y,
+						mouse.end.x - mouse.start.x, mouse.end.y - mouse.start.y);
+					break;
+				case "crcl":
+				  ctx = mouse.isDragged ? configMap.oprCtx : configMap.cvsCtx;
+					var dist;
+					dist = Math.sqrt(
+						Math.pow(mouse.end.x - mouse.start.x, 2)
+							+ Math.pow(mouse.end.y - mouse.start.y, 2)
+					);
+					ctx.beginPath();
+					ctx.arc(mouse.start.x, mouse.start.y, dist, 0, 2 * Math.PI, true);
+					ctx.fill();
+					break;
+				case "line":
+				  ctx = mouse.isDragged ? configMap.oprCtx : configMap.cvsCtx;
+					ctx.beginPath();
+					ctx.moveTo(mouse.start.x, mouse.start.y);
+					ctx.lineTo(mouse.end.x, mouse.end.y);
+					ctx.closePath();
+					ctx.stroke();
+					break;
+				case "rbbr":
+					ctx.beginPath();
+					ctx.moveTo(mouse.previous.x, mouse.previous.y);
+					ctx.lineTo(mouse.end.x, mouse.end.y);
+					ctx.stroke();
+					break;
+				default:
+					console.log("Error! :" + stateMap.selectedTool);
+			}
+			return false;
+		};
+
+		initModule = function (){
+			// Initialize tool parameters
+			stateMap.selectedTool = "brsh";
+			configMap.selectedAreaColor = "rgba(63, 127, 191, 0.6)";
+			configMap.cvsCtx = cvd.canvas.getCvsCtx();
+			configMap.oprCtx = cvd.canvas.getOprCtx();
+			configMap.oprCtx.fillStyle = configMap.selectedAreaColor;
+			configMap.oprCtx.strokeStyle = configMap.selectedAreaColor;
+
+			stateMap.selectedBrushSize = 10;
+			configMap.cvsCtx.lineWidth =stateMap.selectedBrushSize;
+			configMap.cvsCtx.lineCap = "round";
+		return false;
+	};
+
+	return {
+		down: mouse.down,
+		move: mouse.move,
+		up: mouse.up,
+		draw: draw,
+		initModule: initModule,
+		changeTool: changeTool,
+		changeColor: changeColor
+		};
 }());
+
